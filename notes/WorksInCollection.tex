@@ -1,0 +1,120 @@
+% Typed in TeX because that's what I like, if this ever turns serious and other people contribute these really \textbf{should} be formatted in markdown. 
+\documentclass{amsart}
+\usepackage{verbatim}
+\usepackage{listings}
+\newtheorem*{prob}{Problem}
+\newtheorem{opt}{Option}
+\theoremstyle{remark}
+\newtheorem{eg}{Example}
+\begin{document}
+    \section{Problem Statement}
+    \begin{prob}
+        Define a coherent but flexible way to represent the relationships of works to one another.
+    \end{prob}
+    The following examples represent some of the diversities of ways works might inter-relate
+    \begin{eg}
+        One work (a chapter) is contained within another (a novel)
+    \end{eg}
+    \begin{eg}
+        One work (a one-shot) is contained within another (an anthology)
+    \end{eg}
+    \begin{eg}
+        One work (a chapter) is contained within another (a novel)
+    \end{eg}
+    \begin{eg}
+        One work (a chaptered story) is a sequel to another (\textit{ibid.})
+    \end{eg}
+    \begin{eg}
+        One work (a one-shot) is a retelling of part of another work (a chaptered story) from a different chacater's point of view.
+    \end{eg}
+    \begin{eg}
+        One work (a chaptered story) is book three of a sprawling epic work
+    \end{eg}
+    \begin{eg}
+        One work shares a continuity with another work, but does not directly rely on the events of it (e.g., \textit{Wide Sargasso Sea}'s relationship to \textit{Jane Eyre}).
+    \end{eg}
+    However, there are many more possible relations, and we'd like a schema that allows easy expansion for frequently recurring relationships not on this list, perhaps even going so far as to allow authors to define their own relations between works; this flexibility would be very useful for fandoms. At the same time a too-rarified view of Works obscures the details and distinguishing marks of relations from clients' queries. 
+    \section{Options}
+
+\subsection{Works nest other works}
+In this scenario, a Work would allow arbitrary nesting by having a Content property that was itself an array of works. This would allow, \textit{e.g.}, novels to contain their chapters, and series to contain their books. 
+\begin{lstlisting}[frame=single,basicstyle=\small]
+interface Work
+{
+  title: String!
+  author: User!    
+}
+
+# sequenced works, anthologies, etc. 
+type BranchWork implements Work
+{
+  parts: [Work!]!
+  # fields implementing Work interface
+}
+
+#Chapters, one-shots, things which can be read without
+# subdivisions
+type LeafWork implements Work
+{
+  text: String! 
+  # fields implementing Work interface
+}
+\end{lstlisting}
+
+This does one thing well and three other things poorly. On the positive side, this gives the user an enormous amount of freedom in segmenting their work into pieces. If they want subsections or subchapters of a work they can go ham. But the aribitrariness of the containment structure here also means that this has three severe limitations
+\begin{enumerate}
+  \item \label{prob:unnuanced} It flattens all relationships between works to containment, which isn't necessarily right. Indeed, that's flat-out wrong (translations, remixes, etc).
+  \item \label{prob:opaque} The simplicity makes the meaning of the containment relationship opaque to queries. Is this a chapter divided into subparts? Is this a novel divided into chapters? An anthology divided into entries? A reading list with entries? We have no way of knowing.
+  \item \label{prob:unconstrained} Nothing actually enforces the tree structure of works-containing-works in this schema. A BranchWork could, e.g., reference itself and never expand into a LeafWork with actual readable text.
+\end{enumerate}
+
+\subsection{Work types are defined in an enum}
+This takes the previous approach and enriches the works which contain other works with a field identifying the nature of the containment.
+\begin{lstlisting}[frame=single,basicstyle=\small]
+enum WorkContainerType
+{
+    ANTHOLOGY
+    SERIAL
+}
+
+# sequenced works, anthologies, etc.
+type BranchWork implements Work
+{
+  containerType: WorkContainerType
+  parts: [Work!]!   
+  # fields implementing Work interface
+}
+\end{lstlisting}
+This somewhat alleviates problem \ref{prob:opaque}, but does not move us forward on either \ref{prob:unnuanced} or \ref{prob:unconstrained}. Moreover, it resolves \ref{prob:opaque} by doubling down on \ref{prob:unnuanced} -- i.e., the containment relationship is transparent to queries because it's restricted to values in the enumeration. Maybe even worse, it throws a wrench in the one unequivocal good thing the previous option had going for it, because now the sequence of containers for a sub-division of a work all must have a corresponding value somewhere in \lstinline|WorkContainer|. 
+
+\subsection{Relations are defined as connection objects}
+Consider a different appraoch
+\begin{lstlisting}[frame=single,basicstyle=\small]
+interface Work{
+  title: String!
+  author: User!
+  anthologizedIn: AnthologyConnection
+  serializedIn: SerialConnection
+  translatedBy: TranslationConnection
+  retoldBy: RetellingConnection
+  text: String!
+}
+
+type GroupedWork implements Work
+{
+  # fields implementing Work interface
+}
+
+type ReadableWork implements Work
+{
+  # fields implementing Work interface, AND
+  text: String!
+}
+\end{lstlisting}
+
+This allows, on the one hand, each kind of relation to be enriched with fields it needs, but also allows arbitrary nesting. In some cases (serialization) this is good, in others it may be more of a problem (If A translates B, is it valid for C to then translate B?) 
+
+\subsection{Relation is disaggregated from reading sequence}
+    % Relation is disaggregated from reading sequence. 
+    % Actually, how is this different than above? Or is the idea that serializationConnection is just an especially enriched structure?
+\end{document}
