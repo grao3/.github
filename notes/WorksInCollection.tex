@@ -115,6 +115,13 @@ type ReadableWork implements Work
 This allows, on the one hand, each kind of relation to be enriched with fields it needs, but also allows arbitrary nesting. In some cases (serialization) this is good, in others it may be more of a problem (If A translates B, is it valid for C to then translate B?) 
 
 \subsection{Relation is disaggregated from reading sequence}
+This may not actually be distinct from the approach immediately above, but here is a general, birds-eye-view thought: publication in an anthology, translation, fandom remix, and so on are relations distinct from what we called ``serialization'' above and really don't have that much in common with it even though we lump them all together as related works. Instead, consider the following plan: 
+\begin{itemize}
+\item All works have a canonical reading sequence
+\item If a work has text, this is its only reading sequence
+\item If a work has text, its canonical (and only) reading sequence is a list containing itself.
+\item If a work is a grouped work (i.e., contains readable components), it may have other reading sequences.
+\end{itemize}
     % Relation is disaggregated from reading sequence. 
     % Actually, how is this different than above? Or is the idea that serializationConnection is just an especially enriched structure?
 \end{document}
